@@ -85,9 +85,8 @@ def get_blend_affordances():
 
 def translate_level(level, game):
     translate_func = translate[game]
-    for i, row in enumerate(level):
-        level[i] = translate_func(row)
-    return level
+    level_t = translate_func(level)
+    return level_t
 
 def affordify(line,aff):
   a_line = ''
@@ -274,7 +273,6 @@ def get_image_from_segment(segment, tilesize=16):
             img.paste(images_to_use[tile],(col*16,row*16))
     return img
 
-
 def translate_ki(level):
     t_level = []
     for line in level:
@@ -291,9 +289,7 @@ def translate_ki(level):
             else:
                 t_line += c
         t_level.append(t_line)
-    return [t_level]
-
-
+    return t_level
 
 def translate_smb(level):
     t_level = []
@@ -308,8 +304,9 @@ def translate_smb(level):
                 t_line += 'E'
             else:
                 t_line += c
+        print(line, '\t', t_line)
         t_level.append(t_line)
-    return [t_level]
+    return t_level
 
 def translate_mm(level):
     t_level = []
@@ -329,6 +326,6 @@ def translate_mm(level):
             else:
                 t_line += c
         t_level.append(t_line)
-    return [t_level]
+    return t_level
 
 translate = {'SMB':translate_smb, 'KI':translate_ki, 'MM':translate_mm}
