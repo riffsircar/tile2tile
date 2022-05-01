@@ -328,4 +328,24 @@ def translate_mm(level):
         t_level.append(t_line)
     return t_level
 
-translate = {'SMB':translate_smb, 'KI':translate_ki, 'MM':translate_mm}
+def translate_met(level):
+    t_level = []
+    for line in level:
+        t_line = ''
+        for c in line:
+            if c in '#B':
+                t_line += 'X'
+            elif c in 'E':
+                t_line += 'E'
+            elif c in 'D':
+                t_line += '|'
+            elif c in '+':
+                t_line += '*'
+            elif c in 'P':
+                t_line += '-'
+            else:
+                t_line += c
+        t_level.append(t_line)
+    return t_level
+
+translate = {'SMB':translate_smb, 'KI':translate_ki, 'MM':translate_mm,'Met':translate_met}

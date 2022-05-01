@@ -7,4 +7,4 @@ for game in ['SMB','KI','MM','Met']:
         aff = json.load(f)
     for level_file in os.listdir('VGLC/' + game + '/'):
         level = open('VGLC/' + game + '/' + level_file).read().splitlines()
-        level = translate_level(level,game)
+        translated_level = translate_level(level,game)
