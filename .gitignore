@@ -1,3 +1,9 @@
 __pycache__/
 *.pyc
 *.txt
+*.ipynb
+filters_train.py
+outputs/
+trained_models/
+.vscode
+*.tar

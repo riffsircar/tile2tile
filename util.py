@@ -1,13 +1,20 @@
-import os, re, sys, json, copy
+import os, re, sys, json, copy, random
 import numpy as np
 import torch
 from PIL import Image
 
 sketch_chars = ['X','E','|','*','-']
+int2sc = dict(enumerate(sketch_chars))
+sc2int = {ch: ii for ii, ch in int2sc.items()}
+num_sketch_tiles = len(sc2int)
+
 num_tiles = 39  # afford - 10, non-afford - 39
 #{'#': 0, '*': 1, '+': 2, '-': 3, '<': 4, '>': 5, '?': 6, 'B': 7, 'C': 8, 'D': 9, 'E': 10, 'G': 11, 'H': 12, 'L': 13, 'M': 14, 'Q': 15, 'S': 16, 'T': 17, 'U': 18, 'W': 19, 'X': 20, '[': 21, ']': 22, '^': 23, 'b': 24, 'd': 25, 'e': 26, 'g': 27, 'h': 28, 'l': 29, 'm': 30, 'o': 31, 'r': 32, 's': 33, 't': 34, 'u': 35, 'w': 36, 'x': 37, '|': 38}
+affs = {'smb': 'aff_smb.json', 'ki':'aff_ki.json', 'mm': 'aff_mm.json', 'met':'aff_met.json'}
+game_folders_nor = {'smb':'smb_chunks_nor','ki':'ki_chunks_nor','mm':'mm_chunks_nor','met':'met_chunks_nor','ng':'ng_chunks_nor','cv':'cv_chunks_nor'}
+game_folders = {'smb':'smb_chunks','ki':'ki_chunks','mm':'mm_chunks','met':'met_chunks','ng':'ng_chunks','cv':'cv_chunks'}
 
-int2char = {0: '#', 1: '*', 2: '+', 3: '-', 4: '<', 5: '>', 6: '?', 7: 'B', 8: 'C', 9: 'D', 10: 'E', 11: 'G', 12: 'H', 13: 'L', 14: 'M', 15: 'Q', 16: 'S', 17: 'T', 18: 'U', 19: 'W', 20: 'X', 21: '[', 22: ']', 23: '^', 24: 'b', 25: 'd', 26: 'e', 27: 'g', 28: 'h', 29: 'l', 30: 'm', 31: 'o', 32: 'r', 33: 's', 34: 't', 35: 'u', 36: 'w', 37: 'x', 38: '|'}
+#int2char = {0: '#', 1: '*', 2: '+', 3: '-', 4: '<', 5: '>', 6: '?', 7: 'B', 8: 'C', 9: 'D', 10: 'E', 11: 'G', 12: 'H', 13: 'L', 14: 'M', 15: 'Q', 16: 'S', 17: 'T', 18: 'U', 19: 'W', 20: 'X', 21: '[', 22: ']', 23: '^', 24: 'b', 25: 'd', 26: 'e', 27: 'g', 28: 'h', 29: 'l', 30: 'm', 31: 'o', 32: 'r', 33: 's', 34: 't', 35: 'u', 36: 'w', 37: 'x', 38: '|'}
 images = {
     'P': Image.open('tiles/P.png'),
     '-': Image.open('tiles/-.png'),
@@ -48,6 +55,7 @@ images = {
     'w': Image.open('tiles/MM_w.png'),
     'x': Image.open('tiles/MM_X.png'),
     '|': Image.open('tiles/MM_L.png'),
+    
 
     # Met
     '^': Image.open('tiles/Met_^2.png'),
@@ -55,7 +63,11 @@ images = {
     'e': Image.open('tiles/Met_E.png'),
     'g': Image.open('tiles/Met_G.png'),
     'r': Image.open('tiles/Met_R.png'),
-    'u': Image.open('tiles/Met_U.png')
+    'u': Image.open('tiles/Met_U.png'),
+    '[': Image.open('tiles/Met_[.png'),
+    ']': Image.open('tiles/Met_].png'),
+
+    '@': Image.open('tiles/0.png'),
 }
 
 all_images = {16: images}
@@ -83,10 +95,40 @@ def get_blend_affordances():
             aff_blend[key].extend(val)
     return aff_blend
 
+def preprocess_level(level,game):
+    out_level = []
+    for i, line in enumerate(level):
+        if i == len(level)-1 and game == 'smb':
+            line = line.replace('X','G')
+        if game == 'ng':
+            line = line.replace('P','-')
+        if game == 'mm':
+            line = line.replace('#','x')
+            line = line.replace('B','s')
+            line = line.replace('H','h')
+            line = line.replace('M','m')
+            line = line.replace('P','-')
+        elif game == 'met':
+            line = line.replace('#','g')
+            line = line.replace('+','u')
+            line = line.replace('B','r')
+            line = line.replace('D','d')
+            line = line.replace('E','e')
+            line = line.replace('v','-')
+        out_level.append(line)
+    return out_level
+
 def translate_level(level, game):
     translate_func = translate[game]
     level_t = translate_func(level)
     return level_t
+
+def translate_file(folder,f,game):
+    chunk = open(folder + f, 'r').read().splitlines()
+    chunk = [line.replace('\r\n','') for line in chunk]
+    print('\n'.join(chunk))
+    t_chunk = translate_level(chunk, game)
+    return t_chunk
 
 def affordify(line,aff):
   a_line = ''
@@ -148,6 +190,7 @@ def parse_folder(folder,game, affordances=None, afford=False):
                         line = line.replace('B','r')
                         line = line.replace('D','d')
                         line = line.replace('E','e')
+                        line = line.replace('^','-')
                 text += line
                 level.append(list(line.rstrip()))
             levels.append(level)
@@ -226,6 +269,13 @@ def get_segment_from_file(folder,f):
     chunk = open(folder + f, 'r').read().splitlines()
     chunk = [line.replace('\r\n','') for line in chunk]
     return chunk
+    
+    data = torch.DoubleTensor(out_onehot).to(device)
+    if MODEL_TYPE == LIN:
+        data = data.view(data.size(0),-1)
+        z, _, _, = model.encoder.encode(data)
+    elif MODEL_TYPE == CONV:
+        z, _, _ = model.encode(data)
     out = []
     for line in chunk:
         line_list = list(line)
@@ -265,13 +315,27 @@ def display_generation_games(generated, int2char):
       print('\n'.join(level),'\n')
 
 def get_image_from_segment(segment, tilesize=16):
-    dim = (15,16)
+    dim = len(segment), len(segment[0])
     img = Image.new('RGB',(dim[1]*tilesize, dim[0]*tilesize))
     images_to_use = all_images[tilesize]
     for row, seq in enumerate(segment):
         for col, tile in enumerate(seq):
             img.paste(images_to_use[tile],(col*16,row*16))
     return img
+
+
+def get_image_from_multiple_levels(levels,name):
+    img = Image.new('RGB',(16*16*len(levels), 15*16*len(levels)))
+    for i, level in enumerate(levels):
+        for row, seq in enumerate(level):
+            for col, tile in enumerate(seq):
+                x = (i*16)+(col*16)
+                y = (i*16)+(row*16)
+                print(i, x, y)
+                img.paste(images[tile], (x, y))
+    img.save(name + '.png')
+    return img
+
 
 def translate_ki(level):
     t_level = []
@@ -296,7 +360,7 @@ def translate_smb(level):
     for line in level:
         t_line = ''
         for c in line:
-            if c in 'X<>[]S':
+            if c in 'X<>[]SG':
                 t_line += 'X'
             elif c in 'o?Q':
                 t_line += '*'
@@ -304,18 +368,23 @@ def translate_smb(level):
                 t_line += 'E'
             else:
                 t_line += c
-        print(line, '\t', t_line)
+        #print(line, '\n', t_line, '\n\n')
         t_level.append(t_line)
     return t_level
 
+# line = line.replace('#','x')
+#             line = line.replace('B','s')
+#             line = line.replace('H','h')
+#             line = line.replace('M','m')
+#             line = line.replace('P','-')
 def translate_mm(level):
     t_level = []
     for line in level:
         t_line = ''
         for c in line:
-            if c in '#BM':
+            if c in '#BMsmx':
                 t_line += 'X'
-            elif c in 'CHt':
+            elif c in 'CHth':
                 t_line += 'E'
             elif c in 'D|':
                 t_line += '|'
@@ -328,18 +397,23 @@ def translate_mm(level):
         t_level.append(t_line)
     return t_level
 
+# line = line.replace('#','g')
+#             line = line.replace('+','u')
+#             line = line.replace('B','r')
+#             line = line.replace('D','d')
+#             line = line.replace('E','e')
 def translate_met(level):
     t_level = []
     for line in level:
         t_line = ''
         for c in line:
-            if c in '#B':
+            if c in '#Bgr[]':
                 t_line += 'X'
-            elif c in 'E':
+            elif c in 'Ee':
                 t_line += 'E'
-            elif c in 'D':
+            elif c in 'Dd':
                 t_line += '|'
-            elif c in '+':
+            elif c in '+u':
                 t_line += '*'
             elif c in 'P':
                 t_line += '-'
@@ -348,4 +422,78 @@ def translate_met(level):
         t_level.append(t_line)
     return t_level
 
-translate = {'SMB':translate_smb, 'KI':translate_ki, 'MM':translate_mm,'Met':translate_met}
+translate = {'smb':translate_smb, 'ki':translate_ki, 'mm':translate_mm,'met':translate_met}
+
+
+
+def apply_ae(model, translated, num_tiles, int2char):
+    enc = []
+    for line in translated:
+        line_list = list(line)
+        line_list_map = [sc2int[x] for x in line_list]
+        enc.append(line_list_map)
+    enc = np.asarray(enc)
+    enc_onehot = np.eye(num_sketch_tiles, dtype='uint8')[enc]
+    enc_onehot = np.rollaxis(enc_onehot, 2, 0)
+    enc_onehot = enc_onehot[None, :, :]
+    enc_tensor = torch.from_numpy(enc_onehot).to(dtype=torch.float64)
+    enc_tensor = enc_tensor.reshape(enc_tensor.size(0),-1).float()
+    model_out = model(enc_tensor)
+    model_out = model_out.reshape(model_out.size(0),num_tiles,15,16)
+    model_out = model_out.data.cpu().numpy()
+    
+    model_out = np.argmax(model_out, axis=1).squeeze(0)
+    level = np.zeros(model_out.shape)
+    level = []
+    for m in model_out:
+        level.append(''.join([int2char[t] for t in m]))
+    return level
+
+def apply_mrf(level,mrf):
+    #print(level)
+    #print(type(level))
+    oops = 0
+    #out_level = ['-' * (len(level[0])-1) for j in range(len(level))]
+    out_level = ['' for i in range(len(level))]
+    #print(len(out_level), len(out_level[0]))
+    
+    for row in range(1, len(level)-1):
+        for col in range(1, len(level[0])-1):
+            #print(row, col, len(level[row]))
+            north = level[row-1][col]
+            south = level[row+1][col]
+            east = level[row][col-1]
+            try:
+                west = level[row][col+1]
+            except:
+                print(len(level), len(level[0]))
+                print(level[row], len(level[row]))
+                print(row, col)
+                sys.exit()
+            context = north+south+east+west
+            if context in mrf:
+                #r = random.random()
+                #print(r)
+                tiles, probs = [], []
+                for t, p in mrf[context].items():
+                    tiles.append(t)
+                    probs.append(p)
+                #tiles = list(mrf[context].keys())
+                #probs = list(mrf[context].values())
+                #print(context, mrf[context])
+                #print(tiles, probs)
+                tile = np.random.choice(tiles, p=probs)
+                #out_level[row][col] = tile
+                out_level[row] += tile
+            else:
+                if '@' in context:
+                    out_level[row] = '@'
+                else:
+                    out_level[row] += '-'
+                oops += 1
+        #print(out_level[row])
+
+    del out_level[0]
+    del out_level[len(out_level)-1]
+    return out_level
+    
