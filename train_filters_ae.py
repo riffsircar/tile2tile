@@ -17,7 +17,7 @@ from model_lin import get_model, load_model
 from Autoencoder import *
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 from util import *
-
+from tqdm import tqdm
 
 parser = argparse.ArgumentParser(description='Autoencoder')
 
@@ -32,10 +32,7 @@ args = parser.parse_args()
 
 
 path = ''
-folder = path + 'data/' + game_folders_nor[args.game]
-#manual_seed = random.randint(1, 10000)
-#random.seed(manual_seed)
-## Random Seed
+folder = path + 'data/' + game_folders[args.game]
 
 args.cuda = 0
 args.verbose = 1
@@ -70,10 +67,13 @@ num_tiles = len(char2int)
 
 print('Tiles: ', num_tiles)
 print('Sketch Tiles: ', num_sketch_tiles)
-
 inputs, targets = [], []
 for level in levels:
     if args.game == 'smb' and not pipe_check(level):
+        continue
+    if len(level[0]) != 16 or len(level) != 15:
+        print(len(level), len(level[0]))
+        print('skipping level')
         continue
     tar, inp = [], []
     #translate_func = translate[GAME]
@@ -97,10 +97,9 @@ for level in levels:
     targets.append(tar)
     #for _ in range(len(t_levels)):
     #    targets.append(tar)
-    
+
 inputs = np.array(inputs)
 targets = np.array(targets)
-print(inputs.shape, targets.shape)
 
 inputs_onehot = np.eye(num_sketch_tiles, dtype='uint8')[inputs]
 inputs_onehot = np.rollaxis(inputs_onehot, 3, 1)
@@ -113,18 +112,18 @@ targets_train = torch.from_numpy(targets_onehot).to(dtype=torch.float64)
 train_ds = TensorDataset(inputs_train,targets_train)
 train_dl = DataLoader(train_ds, batch_size=args.batch_size,shuffle=True)
 
-#vae, opt = get_model(device, 240, num_sketch_tiles, num_tiles, latent_dim,1e-3)
-#vae, opt = get_conv_big_model(device, num_sketch_tiles, num_tiles, latent_dim)
-#input_size = np.prod(train_ds[0][0].size())
 input_size = num_sketch_tiles*15*16
 output_size = num_tiles*15*16
 
+
+step_size = int(args.epochs/4)
+print('Step size: ', step_size)
 if args.mt == 'fc':
     model = Autoencoder(input_size, output_size, args.z).to(args.device)
 else:
     model = ConvAutoencoder(num_sketch_tiles, num_tiles, args.z).to(args.device)
 opt = optim.Adam(model.parameters(), lr=0.001)
-scheduler = optim.lr_scheduler.StepLR(opt, step_size=2500)
+scheduler = optim.lr_scheduler.StepLR(opt, step_size=step_size)
 #print(model)
 
 def loss_fn(x_recon, y):
@@ -134,7 +133,7 @@ def loss_fn(x_recon, y):
 
 num_batches = len(train_dl)
 model.train()
-for i in range(args.epochs):
+for i in tqdm(range(args.epochs)):
     train_loss = 0
     for batch, (x,y) in enumerate(train_dl):
         x, y = x.to(args.device), y.to(args.device)
@@ -143,15 +142,12 @@ for i in range(args.epochs):
         #print(x.shape, y.shape)
         opt.zero_grad()
         recon_x = model(x.float())
-        #print(recon_x.shape)
-        #print(x.shape, recon_x.shape, y.shape)
-        #sys.exit()
-        #recon_x, mu, logvar, z = vae(x)
         loss = loss_fn(recon_x, y)
         train_loss += loss.item()
         loss.backward()
         opt.step()
     train_loss /= num_batches
-    print('Epoch: %d\tLoss: %.2f' % (i, train_loss))
+    if i % 250 == 0:
+        print('Epoch: %d\tLoss: %.2f' % (i, train_loss))
     scheduler.step()
 torch.save(model.state_dict(), args.model_name + '.pth')

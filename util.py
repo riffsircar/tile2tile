@@ -12,7 +12,7 @@ num_tiles = 39  # afford - 10, non-afford - 39
 #{'#': 0, '*': 1, '+': 2, '-': 3, '<': 4, '>': 5, '?': 6, 'B': 7, 'C': 8, 'D': 9, 'E': 10, 'G': 11, 'H': 12, 'L': 13, 'M': 14, 'Q': 15, 'S': 16, 'T': 17, 'U': 18, 'W': 19, 'X': 20, '[': 21, ']': 22, '^': 23, 'b': 24, 'd': 25, 'e': 26, 'g': 27, 'h': 28, 'l': 29, 'm': 30, 'o': 31, 'r': 32, 's': 33, 't': 34, 'u': 35, 'w': 36, 'x': 37, '|': 38}
 affs = {'smb': 'aff_smb.json', 'ki':'aff_ki.json', 'mm': 'aff_mm.json', 'met':'aff_met.json'}
 game_folders_nor = {'smb':'smb_chunks_nor','ki':'ki_chunks_nor','mm':'mm_chunks_nor','met':'met_chunks_nor','ng':'ng_chunks_nor','cv':'cv_chunks_nor'}
-game_folders = {'smb':'smb_chunks','ki':'ki_chunks','mm':'mm_chunks','met':'met_chunks','ng':'ng_chunks','cv':'cv_chunks'}
+game_folders = {'smb':'smb_chunks','ki':'ki_chunks','mm':'mm_chunks','met':'met_chunks_unique','ng':'ng_chunks','cv':'cv_chunks'}
 
 #int2char = {0: '#', 1: '*', 2: '+', 3: '-', 4: '<', 5: '>', 6: '?', 7: 'B', 8: 'C', 9: 'D', 10: 'E', 11: 'G', 12: 'H', 13: 'L', 14: 'M', 15: 'Q', 16: 'S', 17: 'T', 18: 'U', 19: 'W', 20: 'X', 21: '[', 22: ']', 23: '^', 24: 'b', 25: 'd', 26: 'e', 27: 'g', 28: 'h', 29: 'l', 30: 'm', 31: 'o', 32: 'r', 33: 's', 34: 't', 35: 'u', 36: 'w', 37: 'x', 38: '|'}
 images = {
@@ -191,6 +191,10 @@ def parse_folder(folder,game, affordances=None, afford=False):
                         line = line.replace('D','d')
                         line = line.replace('E','e')
                         line = line.replace('^','-')
+                        line = line.replace('(','-')
+                        line = line.replace(')','-')
+                        line = line.replace('v','-')
+                        line = line.replace('P','-')
                 text += line
                 level.append(list(line.rstrip()))
             levels.append(level)

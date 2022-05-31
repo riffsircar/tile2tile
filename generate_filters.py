@@ -34,7 +34,7 @@ args = parser.parse_args()
 
 warnings.filterwarnings("ignore")
 path = ''
-folder = path + 'data/' + game_folders_nor[args.game]
+folder = path + 'data/' + game_folders[args.game]
 #manual_seed = random.randint(1, 10000)
 #random.seed(manual_seed)
 ## Random Seed
@@ -86,7 +86,7 @@ model.load_state_dict(torch.load('trained_models/' + args.model_name + '.pth',ma
 model.eval()
 #print(model)
 
-out_file = open('outs_to_' + args.game + '_' + args.mt + '_' + str(args.z) + '.txt', 'w')
+out_file = open('outs/outs_to_' + args.game + '_' + args.mt + '_' + str(args.z) + '_' + str(args.epochs) + '.txt', 'w')
 for from_game in ['smb','ki','mm','met']:
     if from_game == args.game:
         continue
