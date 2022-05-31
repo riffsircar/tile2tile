@@ -453,28 +453,49 @@ def apply_ae(model, translated, num_tiles, int2char):
         level.append(''.join([int2char[t] for t in m]))
     return level
 
-def apply_mrf(level,mrf):
+def sentinelize(level):
+    sentinel_row = '@' * len(level[0])
+    level.insert(0, sentinel_row)
+    level.append(sentinel_row)
+    for i in range(0, len(level)):
+        level[i] = '@' + level[i] + '@'
+    return level
+
+def apply_mrf(level,mrf,ns=4):
     #print(level)
     #print(type(level))
     oops = 0
     #out_level = ['-' * (len(level[0])-1) for j in range(len(level))]
-    out_level = ['' for i in range(len(level))]
+    #print(len(level), len(level[0]))
+    out_level = ['@' * len(level[i]) for i in range(len(level))]
     #print(len(out_level), len(out_level[0]))
-    
+    level = sentinelize(level)
+    out_level = sentinelize(out_level)
+    #print(len(level), len(level[0]))
+    #print(len(out_level), len(out_level[0]))
+    out_level = [list(row) for row in out_level]
     for row in range(1, len(level)-1):
         for col in range(1, len(level[0])-1):
             #print(row, col, len(level[row]))
             north = level[row-1][col]
             south = level[row+1][col]
             east = level[row][col-1]
-            try:
-                west = level[row][col+1]
-            except:
-                print(len(level), len(level[0]))
-                print(level[row], len(level[row]))
-                print(row, col)
-                sys.exit()
-            context = north+south+east+west
+            west = level[row][col+1]
+            # except:
+            #     print(len(level), len(level[0]))
+            #     print(level[row], len(level[row]))
+            #     print(row, col)
+            #     sys.exit()
+            
+            if ns == 8:
+                north_west = level[row-1][col-1]
+                north_east = level[row-1][col+1]
+                south_west = level[row+1][col-1]
+                south_east = level[row+1][col+1]
+                context = north_west+north+north_east+east+west+south_west+south+south_east
+            else:
+                context = north+south+east+west
+
             if context in mrf:
                 #r = random.random()
                 #print(r)
@@ -487,17 +508,31 @@ def apply_mrf(level,mrf):
                 #print(context, mrf[context])
                 #print(tiles, probs)
                 tile = np.random.choice(tiles, p=probs)
-                #out_level[row][col] = tile
-                out_level[row] += tile
+                out_level[row][col] = tile
+                #out_level[row] += tile
             else:
-                if '@' in context:
-                    out_level[row] = '@'
+                if context == '@' * ns:
+                    #out_level[row] = '@'
+                    out_level[row][col] = '@'
                 else:
-                    out_level[row] += '-'
+                    #out_level[row] += '-'
+                    out_level[row][col] = '-'
                 oops += 1
         #print(out_level[row])
-
+    #print(len(out_level), len(out_level[0]))
+    #print(out_level[0])
+    #print(out_level[len(out_level)-1])
     del out_level[0]
     del out_level[len(out_level)-1]
+
+    for i in range(len(out_level)-1):
+        #print(out_level[i])
+        out_level[i] = ''.join(out_level[i][1:-1])
+        #print(out_level[i])
+        #sys.exit()
+    
+    #print(len(out_level), len(out_level[0]))
+    #print(out_level[0])
+    #print(out_level[len(out_level)-1])
     return out_level
     

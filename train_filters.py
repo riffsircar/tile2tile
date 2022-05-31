@@ -2,6 +2,7 @@ import os, sys, pickle
 from util import *
 
 #affs = {'SMB': 'aff_smb.json', 'KI':'aff_ki.json', 'MM': 'aff_mm.json', 'Met':'aff_met.json'}
+mrf_ns = int(sys.argv[1])
 
 for game in ['smb','ki','mm','met']:
     print(game)
@@ -13,6 +14,9 @@ for game in ['smb','ki','mm','met']:
         level = open('VGLC/' + game + '/' + level_file).read().splitlines()
         level = preprocess_level(level,game)
         translated_level = translate_level(level,game)
+        #print(translated_level)anslated_level[0])
+        translated_level = sentinelize(translated_level)
+        level = sentinelize(level)
         levels.append(level)
         translated_levels.append(translated_level)
 
@@ -21,14 +25,21 @@ for game in ['smb','ki','mm','met']:
         for row in range(1, len(translated)-1):
             for col in range(1,len(translated[0])-1):
                 #print(row, col)
+                tile = level[row][col]
+
                 north = translated[row-1][col]
                 south = translated[row+1][col]
                 east = translated[row][col-1]
                 west = translated[row][col+1]
                 
-                tile = level[row][col]
-                
-                context = north+south+east+west
+                if mrf_ns == 8:
+                    north_west = translated[row-1][col-1]
+                    north_east = translated[row-1][col+1]
+                    south_west = translated[row+1][col-1]
+                    south_east = translated[row+1][col+1]
+                    context = north_west+north+north_east+east+west+south_west+south+south_east
+                else:
+                    context = north+south+east+west
                 if context not in markov_counts:
                     markov_counts[context] = {}
                 if tile not in markov_counts[context]:
@@ -44,4 +55,4 @@ for game in ['smb','ki','mm','met']:
             markov_probs[context][tile] = count/freq_sum
     print('\n',markov_probs,'\n','\n')
     
-    pickle.dump(markov_probs, open('mrf_' + game + '.pickle', 'wb'))
+    pickle.dump(markov_probs, open('mrf_' + str(mrf_ns) + '_' + game + '.pickle', 'wb'))
