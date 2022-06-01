@@ -7,8 +7,8 @@ path = '../VGLC/Met/'
 for file in os.listdir(path):
 	i = 0
 	level = file[file.index('_')+1]
-	#if level != '3':
-	#		continue
+	if level != '3':
+		continue
 	print(file)
 	data = open(path + file,'r').read().splitlines()
 	data = [line.replace('\r\n','') for line in data]
@@ -38,7 +38,7 @@ for file in os.listdir(path):
 
 			if write:
 				out_string = '\n'.join(out)
-				outfile = open('../data/met_chunks/' + file[:-4] + '_chunk_' + str(i) + '.txt','w')
+				outfile = open('../data/met_chunks_3/' + file[:-4] + '_chunk_' + str(i) + '.txt','w')
 				for j, line in enumerate(out):
 					outfile.write(line)
 					if j < len(out)-1:

@@ -13,7 +13,6 @@ from torch.autograd import Variable
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
-from model_lin import get_model, load_model
 from Autoencoder import *
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 from util import *
@@ -118,6 +117,8 @@ output_size = num_tiles*15*16
 
 step_size = int(args.epochs/4)
 print('Step size: ', step_size)
+print('Input size: ', input_size)
+print('Output size: ', output_size)
 if args.mt == 'fc':
     model = Autoencoder(input_size, output_size, args.z).to(args.device)
 else:

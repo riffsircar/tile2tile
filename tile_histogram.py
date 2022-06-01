@@ -67,59 +67,23 @@ else:
 opt = optim.Adam(model.parameters(), lr=0.001)
 model.load_state_dict(torch.load('trained_models/' + args.model_name + '.pth',map_location=torch.device(args.device)))
 model.eval()
-print(model)
 
-def get_pattern_dict(levels, ps):
-    patterns = collections.defaultdict(int)
-    for level in levels:
-        level = [''.join(l) for l in level]
-        for r in range(0,len(level)-ps):
-            for c in range(0, len(level[0])-ps):
-                out = []
-                for line in level[r:r+ps]:
-                    out.append(line[c:c+ps])
-                outstr = ''.join(out)
-                if outstr not in patterns:
-                    patterns[outstr] = 1
-                else:
-                    patterns[outstr] += 1
-    return patterns
-
-
-def compute_pattern_prob(pattern_count, num_patterns, epsilon=1e-7):
-    return (pattern_count + epsilon) / ((num_patterns + epsilon) * (1 + epsilon))
-
-def compute_kldiv(p, q, pattern_sizes):
-    klds = []
-    for ps in pattern_sizes:
-        p_pats = get_pattern_dict(p,ps)
-        q_pats = get_pattern_dict(q,ps)
-
-        num_p = sum(p_pats.values())
-        num_q = sum(q_pats.values())
-        p_probs, q_probs = [], []
-        for pat, count in p_pats.items():
-            p_prob = compute_pattern_prob(count, num_p)
-            q_prob = compute_pattern_prob(q_pats[pat], num_q)
-            p_probs.append(p_prob)
-            q_probs.append(q_prob)
-        #kld = kl_div(p_probs, q_probs)
-        rel = rel_entr(p_probs, q_probs)
-        #kl_divergence += p_prob * math.log(p_prob / q_prob) + (1 - hparams.weight) * q_prob * math.log(q_prob / p_prob)
-        #print(kld.shape)
-        #print(ps, '\t', np.sum(kld), '\t', np.sum(rel))
-        klds.append(np.sum(rel))
-    return np.mean(klds)
-
+hist_original = {}
 to_levels_original_translated = []
 for to_level in to_levels_original:
-    to_translated = translate_level(to_level,args.game)
-    to_translated = [list(l) for l in to_translated]
-    to_levels_original_translated.append(to_translated)
+    to_level = [''.join(l) for l in to_level]
+    for row in to_level:
+        for tile in row:
+            if tile not in hist_original:
+                hist_original[tile] = 0
+            hist_original[tile] += 1
+
+print(hist_original)
 
 
-# COMPUTE APKLD between afford(generated) vs afford(from) and afford(generated) vs afford(to) - former should be lower??
+hist_generated = {}
 for from_game in ['smb','ki','mm','met']:
+    hist_generated[from_game] = {}
     if from_game == args.game:
         continue
     from_folder = path + 'data/' + game_folders[from_game]
@@ -135,20 +99,15 @@ for from_game in ['smb','ki','mm','met']:
         #print(from_level, '\n')
         #print(translated, '\n')
         #print(to_level, '\n')
-        to_level = [list(l) for l in to_level]
-        to_translated = translate_level(to_level, args.game)
-        to_translated = [list(l) for l in to_translated]
-        to_levels_generated_translated.append(to_translated)
+        for row in to_level:
+            for tile in row:
+                if tile not in hist_generated[from_game]:
+                    hist_generated[from_game][tile] = 0
+                hist_generated[from_game][tile] += 1
+        # to_level = [list(l) for l in to_level]
+        # to_translated = translate_level(to_level, args.game)
+        # to_translated = [list(l) for l in to_translated]
+        # to_levels_generated_translated.append(to_translated)
         #print(to_level)
-    
-    # content loss between style-transferred levels and original levels of from game
-    kldiv_from = compute_kldiv(to_levels_generated_translated, from_levels_original_translated, [2,3,4])
-
-    # content loss between style-transferred levels and original levels of to game
-    kldiv_to = compute_kldiv(to_levels_generated_translated, to_levels_original_translated, [2,3,4])
-
-    # content loss between original levels of the 2 games
-    kldiv_from_to = compute_kldiv(from_levels_original_translated, to_levels_original_translated, [2,3,4]) 
-
-    print(f"{from_game} to {args.game}: ")
-    print(kldiv_from, kldiv_to, kldiv_from_to, '\n')
+for game in hist_generated:
+    print(game, hist_generated[game])

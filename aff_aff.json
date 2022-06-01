@@ -3,15 +3,10 @@
         "X"
     ],
     "passable": [
-        "B",
-        "M",
         "-",
-        "*",
-        "W",
-        "D"
+        "*"
     ],
     "hazard": [
-        "H",
         "E"
     ],
     "climbable": [
