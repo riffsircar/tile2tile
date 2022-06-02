@@ -64,8 +64,8 @@ images = {
     'g': Image.open('tiles/Met_G.png'),
     'r': Image.open('tiles/Met_R.png'),
     'u': Image.open('tiles/Met_U.png'),
-    '[': Image.open('tiles/Met_[.png'),
-    ']': Image.open('tiles/Met_].png'),
+    '{': Image.open('tiles/Met_[.png'),
+    '}': Image.open('tiles/Met_].png'),
 
     '@': Image.open('tiles/0.png'),
 }
@@ -116,6 +116,8 @@ def preprocess_level(level,game):
             line = line.replace('E','e')
             line = line.replace('v','-')
             line = line.replace('P','-')
+            line = line.replace('[','{')
+            line = line.replace(']','}')
         out_level.append(line)
     return out_level
 
@@ -196,6 +198,8 @@ def parse_folder(folder,game, affordances=None, afford=False):
                         line = line.replace(')','-')
                         line = line.replace('v','-')
                         line = line.replace('P','-')
+                        line = line.replace('[','{')
+                        line = line.replace(']','}')
                 text += line
                 level.append(list(line.rstrip()))
             levels.append(level)
@@ -412,7 +416,7 @@ def translate_met(level):
     for line in level:
         t_line = ''
         for c in line:
-            if c in '#Bgr[]':
+            if c in '#Bgr{[]}':
                 t_line += 'X'
             elif c in 'Ee^':
                 t_line += 'E'
@@ -431,7 +435,7 @@ translate = {'smb':translate_smb, 'ki':translate_ki, 'mm':translate_mm,'met':tra
 
 
 
-def apply_ae(model, translated, num_tiles, int2char):
+def apply_ae(model, translated, num_tiles, int2char, mt='fc'):
     enc = []
     for line in translated:
         line_list = list(line)
@@ -442,9 +446,11 @@ def apply_ae(model, translated, num_tiles, int2char):
     enc_onehot = np.rollaxis(enc_onehot, 2, 0)
     enc_onehot = enc_onehot[None, :, :]
     enc_tensor = torch.from_numpy(enc_onehot).to(dtype=torch.float64)
-    enc_tensor = enc_tensor.reshape(enc_tensor.size(0),-1).float()
-    model_out = model(enc_tensor)
-    model_out = model_out.reshape(model_out.size(0),num_tiles,15,16)
+    if mt == 'fc':
+        enc_tensor = enc_tensor.reshape(enc_tensor.size(0),-1)
+    model_out = model(enc_tensor.float())
+    if mt == 'fc':
+        model_out = model_out.reshape(model_out.size(0),num_tiles,15,16)
     model_out = model_out.data.cpu().numpy()
     
     model_out = np.argmax(model_out, axis=1).squeeze(0)

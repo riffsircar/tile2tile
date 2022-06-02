@@ -102,6 +102,8 @@ mm_mrf = pickle.load(open('mrf_' + mrf_ns + '_' + 'mm.pickle','rb'))
 met_mrf = pickle.load(open('mrf_' + mrf_ns + '_' + 'met.pickle','rb'))
 mrfs = {'smb':smb_mrf, 'ki':ki_mrf, 'mm':mm_mrf, 'met':met_mrf}
 for from_game in ['smb','ki','mm','met']:
+    if from_game == args.game:
+        continue
     for level_file in os.listdir('VGLC/' + from_game + '/'):
         from_level = open('VGLC/' + from_game + '/' + level_file).read().splitlines()
         from_translated = translate_level(from_level,from_game)

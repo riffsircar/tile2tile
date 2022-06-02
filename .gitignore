@@ -7,3 +7,5 @@ outputs/
 trained_models/
 .vscode
 *.tar
+*.csv
+output_img/

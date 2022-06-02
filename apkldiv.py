@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser(description='Autoencoder')
 
 parser.add_argument('--seed', type=int, default=0, help='random seed (default: 0)')
 parser.add_argument('--cuda', type=int, default=1, help='use of cuda (default: 1)')
-parser.add_argument('--epochs', type=int, default=2500, help='number of total epochs to run (default: 100)')
+parser.add_argument('--epochs', type=int, default=500, help='number of total epochs to run (default: 100)')
 parser.add_argument('--batch_size', default=64, type=int, help='mini-batch size (default: 64)')
 parser.add_argument('--z', default=32, type=int, help='gaussian size (default: 64)')
 parser.add_argument('--game', default='smb', type=str)
@@ -41,7 +41,6 @@ torch.manual_seed(SEED)
 if args.cuda:
     torch.cuda.manual_seed(SEED)
 to_levels_original, text = parse_folder(folder,args.game)
-print(to_levels_original[0])
 text = text.replace('\n','')
 print(len(to_levels_original))
 chars = sorted(list(set(text.strip('\n'))))
@@ -67,7 +66,7 @@ else:
 opt = optim.Adam(model.parameters(), lr=0.001)
 model.load_state_dict(torch.load('trained_models/' + args.model_name + '.pth',map_location=torch.device(args.device)))
 model.eval()
-print(model)
+#print(model)
 
 def get_pattern_dict(levels, ps):
     patterns = collections.defaultdict(int)
@@ -117,7 +116,8 @@ for to_level in to_levels_original:
     to_translated = [list(l) for l in to_translated]
     to_levels_original_translated.append(to_translated)
 
-
+out_file = open(f'apkldiv_{args.game}_{args.mt}_{args.epochs}_{args.z}.csv','w')
+out_file.write('Source,TF Target vs OG Source,TF Target vs OG Target,OG Target vs OG Source\n')
 # COMPUTE APKLD between afford(generated) vs afford(from) and afford(generated) vs afford(to) - former should be lower??
 for from_game in ['smb','ki','mm','met']:
     if from_game == args.game:
@@ -128,27 +128,33 @@ for from_game in ['smb','ki','mm','met']:
     from_levels_original_translated = []
     to_levels_generated_translated = []
     for from_level in from_levels_original:
+
+        # translate source tiles to source affs
         from_translated = translate_level(from_level,from_game)
-        to_level = apply_ae(model, from_translated, num_tiles, int2char)
         from_translated = [list(l) for l in from_translated]
-        from_levels_original_translated.append(from_translated)
-        #print(from_level, '\n')
-        #print(translated, '\n')
-        #print(to_level, '\n')
+        from_levels_original_translated.append(from_translated) # store source levels in aff format
+
+        # apply autoencoder to transfer style from source aff to target tiles
+        to_level = apply_ae(model, from_translated, num_tiles, int2char, args.mt)
+        
+        # translate target tiles to target affs
         to_level = [list(l) for l in to_level]
         to_translated = translate_level(to_level, args.game)
         to_translated = [list(l) for l in to_translated]
-        to_levels_generated_translated.append(to_translated)
-        #print(to_level)
+        to_levels_generated_translated.append(to_translated) # store target levels in aff format
     
-    # content loss between style-transferred levels and original levels of from game
-    kldiv_from = compute_kldiv(to_levels_generated_translated, from_levels_original_translated, [2,3,4])
 
-    # content loss between style-transferred levels and original levels of to game
-    kldiv_to = compute_kldiv(to_levels_generated_translated, to_levels_original_translated, [2,3,4])
+    patterns = [2,3,4]
+    # content/affordance loss between generated targets and original sources
+    kldiv_from = compute_kldiv(to_levels_generated_translated, from_levels_original_translated, patterns)
+
+    # content/affordance loss between generated targets and original targets
+    kldiv_to = compute_kldiv(to_levels_generated_translated, to_levels_original_translated, patterns)
 
     # content loss between original levels of the 2 games
-    kldiv_from_to = compute_kldiv(from_levels_original_translated, to_levels_original_translated, [2,3,4]) 
+    kldiv_from_to = compute_kldiv(to_levels_original_translated, from_levels_original_translated, patterns) 
 
     print(f"{from_game} to {args.game}: ")
     print(kldiv_from, kldiv_to, kldiv_from_to, '\n')
+    out_file.write(f'{from_game},{kldiv_from:.2f},{kldiv_to:.2f},{kldiv_from_to:.2f}\n')
+out_file.close()
