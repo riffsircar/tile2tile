@@ -9,3 +9,5 @@ trained_models/
 *.tar
 *.csv
 output_img/
+output_seg/
+*.zip

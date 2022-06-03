@@ -118,10 +118,13 @@ def preprocess_level(level,game):
             line = line.replace('P','-')
             line = line.replace('[','{')
             line = line.replace(']','}')
+            line = line.replace('(','-')
+            line = line.replace(')','-')
         out_level.append(line)
     return out_level
 
 def translate_level(level, game):
+    level = preprocess_level(level,game)
     translate_func = translate[game]
     level_t = translate_func(level)
     return level_t
@@ -433,6 +436,19 @@ def translate_met(level):
 
 translate = {'smb':translate_smb, 'ki':translate_ki, 'mm':translate_mm,'met':translate_met}
 
+aff_to_tile = {
+    # ['X','E','|','*','-']
+    'smb': {'X': ['G','S','X'], 'E': ['E'], '|': [], '*': ['o','?','Q']},
+    'ki': {'X': ['#','M','T'], 'E': ['H'], '|': ['D'], '*': []},
+    'mm': {'X': ['s','m','x'], 'E': ['h','t'], '|': ['|'], '*': ['*','+','L','U','W','l','w']},
+    'met': {'X': ['g','r'], 'E': ['e'], '|': ['d'], '*': ['u']}
+}
+
+def get_tile_for_aff(aff,game):
+    if aff == '-':
+        return ['-']
+    return aff_to_tile[game][aff]
+
 
 
 def apply_ae(model, translated, num_tiles, int2char, mt='fc'):
@@ -468,7 +484,7 @@ def sentinelize(level):
         level[i] = '@' + level[i] + '@'
     return level
 
-def apply_mrf(level,mrf,ns=4):
+def apply_mrf(level,mrf,game,ns=4):
     #print(level)
     #print(type(level))
     oops = 0
@@ -525,7 +541,12 @@ def apply_mrf(level,mrf,ns=4):
                     out_level[row][col] = '@'
                 else:
                     #out_level[row] += '-'
-                    out_level[row][col] = '-'
+                    tiles = get_tile_for_aff(level[row][col],game)
+                    if len(tiles) == 0:
+                        tile = '-'
+                    else:
+                        tile = random.choice(tiles)
+                    out_level[row][col] = tile
                 oops += 1
         #print(out_level[row])
     #print(len(out_level), len(out_level[0]))

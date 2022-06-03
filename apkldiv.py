@@ -108,7 +108,7 @@ def compute_kldiv(p, q, pattern_sizes):
         #print(kld.shape)
         #print(ps, '\t', np.sum(kld), '\t', np.sum(rel))
         klds.append(np.sum(rel))
-    return np.mean(klds)
+    return klds
 
 to_levels_original_translated = []
 for to_level in to_levels_original:
@@ -117,6 +117,7 @@ for to_level in to_levels_original:
     to_levels_original_translated.append(to_translated)
 
 out_file = open(f'apkldiv_{args.game}_{args.mt}_{args.epochs}_{args.z}.csv','w')
+
 out_file.write('Source,TF Target vs OG Source,TF Target vs OG Target,OG Target vs OG Source\n')
 # COMPUTE APKLD between afford(generated) vs afford(from) and afford(generated) vs afford(to) - former should be lower??
 for from_game in ['smb','ki','mm','met']:
@@ -146,13 +147,16 @@ for from_game in ['smb','ki','mm','met']:
 
     patterns = [2,3,4]
     # content/affordance loss between generated targets and original sources
-    kldiv_from = compute_kldiv(to_levels_generated_translated, from_levels_original_translated, patterns)
+    kldiv_froms = compute_kldiv(to_levels_generated_translated, from_levels_original_translated, patterns)
+    kldiv_from = np.mean(kldiv_froms)
 
     # content/affordance loss between generated targets and original targets
-    kldiv_to = compute_kldiv(to_levels_generated_translated, to_levels_original_translated, patterns)
+    kldiv_tos = compute_kldiv(to_levels_generated_translated, to_levels_original_translated, patterns)
+    kldiv_to = np.mean(kldiv_tos)
 
     # content loss between original levels of the 2 games
-    kldiv_from_to = compute_kldiv(to_levels_original_translated, from_levels_original_translated, patterns) 
+    kldiv_from_tos = compute_kldiv(to_levels_original_translated, from_levels_original_translated, patterns) 
+    kldiv_from_to = np.mean(kldiv_from_tos)
 
     print(f"{from_game} to {args.game}: ")
     print(kldiv_from, kldiv_to, kldiv_from_to, '\n')

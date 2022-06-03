@@ -17,6 +17,7 @@ parser.add_argument('--batch_size', default=64, type=int, help='mini-batch size 
 parser.add_argument('--z', default=32, type=int, help='gaussian size (default: 64)')
 parser.add_argument('--game', default='smb', type=str)
 parser.add_argument('--mt', default='fc', choices=['fc','conv'], type=str, help='autoencoder type')
+parser.add_argument('--mod', default='ae', choices=['ae','mrf'], type=str, help='model type')
 args = parser.parse_args()
 
 warnings.filterwarnings("ignore")
@@ -59,106 +60,106 @@ print('Sketch Tiles: ', num_sketch_tiles)
 input_size = num_sketch_tiles*15*16
 output_size = num_tiles*15*16
 
-if args.mt == 'fc':
-    model = Autoencoder(input_size, output_size, args.z).to(args.device)
-else:
-    model = ConvAutoencoder(num_sketch_tiles, num_tiles, args.z).to(args.device)
-opt = optim.Adam(model.parameters(), lr=0.001)
-model.load_state_dict(torch.load('trained_models/' + args.model_name + '.pth',map_location=torch.device(args.device)))
-model.eval()
+if args.mod == 'ae':
+    if args.mt == 'fc':
+        model = Autoencoder(input_size, output_size, args.z).to(args.device)
+    else:
+        model = ConvAutoencoder(num_sketch_tiles, num_tiles, args.z).to(args.device)
+    opt = optim.Adam(model.parameters(), lr=0.001)
+    model.load_state_dict(torch.load('trained_models/' + args.model_name + '.pth',map_location=torch.device(args.device)))
+    model.eval()
 
-hist_original = {}
-to_levels_original_translated = []
-for to_level in to_levels_original:
-    to_level = [''.join(l) for l in to_level]
-    for row in to_level:
-        for tile in row:
-            if tile == '@' or tile == '-':
-                continue
-            if tile not in hist_original:
-                hist_original[tile] = 0
-            hist_original[tile] += 1
-
-import matplotlib.pyplot as plt
-
-print(hist_original)
-
-
-mrf_ns = '4'
-smb_mrf = pickle.load(open('mrf_' + mrf_ns + '_' + 'smb.pickle','rb'))
-ki_mrf = pickle.load(open('mrf_' + mrf_ns + '_' + 'ki.pickle','rb'))
-mm_mrf = pickle.load(open('mrf_' + mrf_ns + '_' + 'mm.pickle','rb'))
-met_mrf = pickle.load(open('mrf_' + mrf_ns + '_' + 'met.pickle','rb'))
-mrfs = {'smb':smb_mrf, 'ki':ki_mrf, 'mm':mm_mrf, 'met':met_mrf}
-
-hist_generated = {}
-for from_game in ['smb','ki','mm','met']:
-    hist_generated[from_game] = {}
-    if from_game == args.game:
-        continue
-    from_folder = path + 'data/' + game_folders[from_game]
-    from_levels_original, text = parse_folder(from_folder,from_game)
-
-    from_levels_original_translated = []
-    to_levels_generated_translated = []
-    for from_level in from_levels_original:
-        from_translated = translate_level(from_level,from_game)
-        to_level = apply_ae(model, from_translated, num_tiles, int2char)
-        from_translated = [list(l) for l in from_translated]
-        from_levels_original_translated.append(from_translated)
-        #print(from_level, '\n')
-        #print(translated, '\n')
-        #print(to_level, '\n')
+    hist_original = {}
+    to_levels_original_translated = []
+    for to_level in to_levels_original:
+        to_level = [''.join(l) for l in to_level]
         for row in to_level:
             for tile in row:
                 if tile == '@' or tile == '-':
                     continue
-                if tile not in hist_generated[from_game]:
-                    hist_generated[from_game][tile] = 0
-                hist_generated[from_game][tile] += 1
-        # to_level = [list(l) for l in to_level]
-        # to_translated = translate_level(to_level, args.game)
-        # to_translated = [list(l) for l in to_translated]
-        # to_levels_generated_translated.append(to_translated)
-        #print(to_level)
-for game in hist_generated:
-    print(game, hist_generated[game])
+                if tile not in hist_original:
+                    hist_original[tile] = 0
+                hist_original[tile] += 1
 
+    import matplotlib.pyplot as plt
+
+    print(hist_original)
+
+    hist_generated = {}
+    for from_game in ['smb','ki','mm','met']:
+        hist_generated[from_game] = {}
+        if from_game == args.game:
+            continue
+        from_folder = path + 'data/' + game_folders[from_game]
+        from_levels_original, text = parse_folder(from_folder,from_game)
+
+        from_levels_original_translated = []
+        to_levels_generated_translated = []
+        for from_level in from_levels_original:
+            from_translated = translate_level(from_level,from_game)
+            to_level = apply_ae(model, from_translated, num_tiles, int2char)
+            from_translated = [list(l) for l in from_translated]
+            from_levels_original_translated.append(from_translated)
+            #print(from_level, '\n')
+            #print(translated, '\n')
+            #print(to_level, '\n')
+            for row in to_level:
+                for tile in row:
+                    if tile == '@' or tile == '-':
+                        continue
+                    if tile not in hist_generated[from_game]:
+                        hist_generated[from_game][tile] = 0
+                    hist_generated[from_game][tile] += 1
+            # to_level = [list(l) for l in to_level]
+            # to_translated = translate_level(to_level, args.game)
+            # to_translated = [list(l) for l in to_translated]
+            # to_levels_generated_translated.append(to_translated)
+            #print(to_level)
+    for game in hist_generated:
+        print(game, hist_generated[game])
+elif args.mod == 'mrf':
 # MRF
-hist_original_mrf = {}
-hist_generated_mrf = {}
-for from_game in ['smb','ki','mm','met']:
-    if from_game == args.game:
-        continue
-    hist_generated_mrf[from_game] = {}
-    for level_file in os.listdir('VGLC/' + from_game + '/'):
-        from_level = open('VGLC/' + from_game + '/' + level_file).read().splitlines()
-        for row in from_level:
-            for tile in row:
-                if tile == '@' or tile == '-':
-                    continue
-                if tile not in hist_original_mrf:
-                    hist_original_mrf[tile] = 0
-                hist_original_mrf[tile] += 1
+    mrf_ns = '4'
+    smb_mrf = pickle.load(open('mrf_' + mrf_ns + '_' + 'smb.pickle','rb'))
+    ki_mrf = pickle.load(open('mrf_' + mrf_ns + '_' + 'ki.pickle','rb'))
+    mm_mrf = pickle.load(open('mrf_' + mrf_ns + '_' + 'mm.pickle','rb'))
+    met_mrf = pickle.load(open('mrf_' + mrf_ns + '_' + 'met.pickle','rb'))
+    mrfs = {'smb':smb_mrf, 'ki':ki_mrf, 'mm':mm_mrf, 'met':met_mrf}
 
-        from_translated = translate_level(from_level,from_game)
-        out_level = apply_mrf(from_translated,mrfs[args.game],int(mrf_ns))
-        #print('\n'.join(out_level))
-        for row in out_level:
-            for tile in row:
-                if tile == '@' or tile == '-':
-                    continue
-                if tile not in hist_generated_mrf[from_game]:
-                    hist_generated_mrf[from_game][tile] = 0
-                hist_generated_mrf[from_game][tile] += 1
-        to_level = [''.join(l) for l in out_level]
-        #print('\n'.join(to_level))
+    hist_original_mrf = {}
+    hist_generated_mrf = {}
+    for from_game in ['smb','ki','mm','met']:
+        if from_game == args.game:
+            continue
+        hist_generated_mrf[from_game] = {}
+        for level_file in os.listdir('VGLC/' + from_game + '/'):
+            from_level = open('VGLC/' + from_game + '/' + level_file).read().splitlines()
+            for row in from_level:
+                for tile in row:
+                    if tile == '@' or tile == '-':
+                        continue
+                    if tile not in hist_original_mrf:
+                        hist_original_mrf[tile] = 0
+                    hist_original_mrf[tile] += 1
 
-print('MRF')
-plt.bar(x=list(hist_original_mrf.keys()), height=hist_original_mrf.values())
-plt.show()
-print(hist_original_mrf)
-for game in hist_generated_mrf:
-    print(game, hist_generated_mrf[game])
-    plt.bar(list(hist_generated_mrf[game].keys()), height=hist_generated_mrf[game].values())
+            from_translated = translate_level(from_level,from_game)
+            out_level = apply_mrf(from_translated,mrfs[args.game],int(mrf_ns))
+            #print('\n'.join(out_level))
+            for row in out_level:
+                for tile in row:
+                    if tile == '@' or tile == '-':
+                        continue
+                    if tile not in hist_generated_mrf[from_game]:
+                        hist_generated_mrf[from_game][tile] = 0
+                    hist_generated_mrf[from_game][tile] += 1
+            to_level = [''.join(l) for l in out_level]
+            #print('\n'.join(to_level))
+
+    print('MRF')
+    plt.bar(x=list(hist_original_mrf.keys()), height=hist_original_mrf.values())
     plt.show()
+    print(hist_original_mrf)
+    for game in hist_generated_mrf:
+        print(game, hist_generated_mrf[game])
+        plt.bar(list(hist_generated_mrf[game].keys()), height=hist_generated_mrf[game].values())
+        plt.show()
