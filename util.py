@@ -123,8 +123,9 @@ def preprocess_level(level,game):
         out_level.append(line)
     return out_level
 
-def translate_level(level, game):
-    level = preprocess_level(level,game)
+def translate_level(level, game, mod='ae'):
+    if mod == 'mrf':
+        level = preprocess_level(level,game)
     translate_func = translate[game]
     level_t = translate_func(level)
     return level_t
@@ -449,10 +450,17 @@ def get_tile_for_aff(aff,game):
         return ['-']
     return aff_to_tile[game][aff]
 
+int2chars = {
+    'smb': {0: '-', 1: '<', 2: '>', 3: '?', 4: 'B', 5: 'E', 6: 'G', 7: 'Q', 8: 'S', 9: 'X', 10: '[', 11: ']', 12: 'b', 13: 'o'},
+    'ki': {0: '#', 1: '-', 2: 'D', 3: 'H', 4: 'M', 5: 'T'},
+    'mm': {0: '*', 1: '+', 2: '-', 3: 'C', 4: 'D', 5: 'L', 6: 'U', 7: 'W', 8: 'h', 9: 'l', 10: 'm', 11: 's', 12: 't', 13: 'w', 14: 'x', 15: '|'},
+    'met': {0: '-', 1: '^', 2: 'd', 3: 'e', 4: 'g', 5: 'u', 6: '{', 7: '}'}   
+}
 
 
-def apply_ae(model, translated, num_tiles, int2char, mt='fc'):
+def apply_ae(model, translated, num_tiles, to_game, mt='fc'):
     enc = []
+    int2char = int2chars[to_game]
     for line in translated:
         line_list = list(line)
         line_list_map = [sc2int[x] for x in line_list]
@@ -555,7 +563,7 @@ def apply_mrf(level,mrf,game,ns=4):
     del out_level[0]
     del out_level[len(out_level)-1]
 
-    for i in range(len(out_level)-1):
+    for i in range(len(out_level)):
         #print(out_level[i])
         out_level[i] = ''.join(out_level[i][1:-1])
         #print(out_level[i])

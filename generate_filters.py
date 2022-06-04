@@ -25,11 +25,11 @@ parser = argparse.ArgumentParser(description='Autoencoder')
 
 parser.add_argument('--seed', type=int, default=0, help='random seed (default: 0)')
 parser.add_argument('--cuda', type=int, default=1, help='use of cuda (default: 1)')
-parser.add_argument('--epochs', type=int, default=500, help='number of total epochs to run (default: 100)')
+parser.add_argument('--epochs', type=int, default=250, help='number of total epochs to run (default: 100)')
 parser.add_argument('--batch_size', default=64, type=int, help='mini-batch size (default: 64)')
 parser.add_argument('--z', default=32, type=int, help='gaussian size (default: 64)')
 parser.add_argument('--game', default='smb', type=str)
-parser.add_argument('--mt', default='fc', choices=['fc','conv'], type=str, help='autoencoder type')
+parser.add_argument('--mt', default='conv', choices=['fc','conv'], type=str, help='autoencoder type')
 args = parser.parse_args()
 
 warnings.filterwarnings("ignore")
@@ -93,7 +93,8 @@ for from_game in ['smb','ki','mm','met']:
     print('Source: ', from_game)
     from_folder = path + 'data/' + game_folders_nor[from_game]
     from_levels, _ = parse_folder(from_folder,from_game)
-    from_samples = random.sample(from_levels, 10)
+    #from_samples = random.sample(from_levels, 50)
+    from_samples = from_levels
     #print(len(from_levels), type(from_levels))
     #print(from_samples[0])
     for i, sample in enumerate(from_samples):
