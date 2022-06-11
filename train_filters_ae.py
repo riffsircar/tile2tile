@@ -124,7 +124,7 @@ if args.mt == 'fc':
 else:
     model = ConvAutoencoder(num_sketch_tiles, num_tiles, args.z).to(args.device)
 opt = optim.Adam(model.parameters(), lr=0.001)
-scheduler = optim.lr_scheduler.StepLR(opt, step_size=step_size)
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(opt,mode='min',factor=0.1, patience=50, threshold=0.0001, verbose=True, min_lr=1e-8)
 #print(model)
 
 def loss_fn(x_recon, y):
@@ -150,5 +150,5 @@ for i in tqdm(range(args.epochs)):
     train_loss /= num_batches
     if i % 250 == 0:
         print('Epoch: %d\tLoss: %.2f' % (i, train_loss))
-    scheduler.step()
+    scheduler.step(train_loss)
 torch.save(model.state_dict(), args.model_name + '.pth')
