@@ -39,15 +39,10 @@ def makeGetNeighbors(jumps,levelStr,visited,isSolid,isPassable,isClimbable,isHaz
 	jumps = jumpDiffs
 
 	def getNeighbors(pos):
-		# print('pos: ', pos)
 		dist = pos[0]-pos[2] 
 		pos = pos[1] 
 		visited.add((pos[0],pos[1])) 
-		below = (pos[0],pos[1]+1) 
-		# print('dist: ', dist)
-		# print('pos: ', pos)
-		# print('below: ', below)
-		# print('jumps: ', jumps)
+		below = (pos[0],pos[1]+1)
 
 		neighbors = []
 		#if the player falls to the bottom of the level
@@ -108,10 +103,6 @@ def makeGetNeighbors(jumps,levelStr,visited,isSolid,isPassable,isClimbable,isHaz
 
 				for jump in range(len(jumps)):
 					ii = 0
-					#print(pos[1]+jumps[jump][ii][1], pos[0]-jumps[jump][ii][0], len(levelStr), len(levelStr[0]))
-					#print(levelStr[pos[1]+jumps[jump][ii][1]])
-					#print(isSolid(levelStr[pos[1]+jumps[jump][ii][1]][pos[0]-jumps[jump][ii][0]]))
-					#print(isPassable(levelStr[pos[1]+jumps[jump][ii][1]][(pos[0]-jumps[jump][ii][0])]))
 					jump_pos_plus_0 = pos[0]+jumps[jump][ii][0]
 					jump_pos_minus_0 = pos[0]-jumps[jump][ii][0]
 					jump_pos_plus_1 = pos[1]+jumps[jump][ii][1]
@@ -298,7 +289,6 @@ def find_start_icarus(level, solids, passables):
 
 def find_goals_icarus(level, start_pos, solids, passables):
 	goals = set()
-	#print('sp: ', start_pos)
 	#for ir in range(len(level) - 1 - index, len(level) - 1):
 	#for ir in range(0, len(level) - 2):
 	for ir in range(0, len(level)//2):
@@ -379,8 +369,6 @@ def find_path(affordances, jumps,levelStr, dir):
 	#goals = goals_h if i == 0 else goals_v
 	if goals is None:
 		return None, goals
-		#paths.append(None)
-		#continue
 	
 	dist[start] = 0
 	prev[start] = None
@@ -460,11 +448,6 @@ def find_path(affordances, jumps,levelStr, dir):
 			path.append(curr_node)
 			curr_node = prev[curr_node]
 		#paths.append(list(reversed(path)))
-	#print('Start_h:' , start_hor, '\tGoals_h: ', goals_h)
-	#print('Start_v:', start_vert, '\tGoals_v: ', goals_v)
-	#print(paths)
-	#return paths[0],paths[1], goals_h, goals_v
-	#return paths[0], goals
 	return list(reversed(path)), goals
 
 def findPaths(affordances, jumps,levelStr,is_vertical=False):
@@ -476,19 +459,10 @@ def findPaths(affordances, jumps,levelStr,is_vertical=False):
 	isClimbable = makeIsClimbable(climbables)
 	getNeighbors = makeGetNeighbors(jumps,levelStr,visited,isSolid,isPassable,isClimbable,isHazard)
 	getNeighborsWrapped = makeGetNeighbors(jumps,levelStr,visited,isSolid,isPassable,isClimbable,isHazard,True)
-	#maxX = len(levelStr[0])-1
 	maxX = len(levelStr[0]) - 1
 	maxY = len(levelStr) - 1
 
-	"""	start_ic = find_start_icarus(levelStr, solids)
-	goals_ic = find_goals_icarus(levelStr, (start_ic[0], start_ic[1]), solids)
-	goals_sm = find_goals_mario(levelStr, (0,0), solids)
-	print('\n','\n'.join(levelStr))
-	print("ICS: ", start_ic)
-	print("IC: ", goals_ic)
-	print("SM: ", goals_sm)
-	return
-	"""
+	
 	# vertical start and goal
 	startX_v = None
 	startY_v = maxY
@@ -497,7 +471,6 @@ def findPaths(affordances, jumps,levelStr,is_vertical=False):
 		if startY_v < 1:
 			break
 		for x in range(1, maxX):
-			#print(x, startY_v)
 			if not isSolid(levelStr[startY_v][x]) and isSolid(levelStr[startY_v + 1][x]):
 				startX_v = x
 				break
@@ -506,7 +479,6 @@ def findPaths(affordances, jumps,levelStr,is_vertical=False):
 	goalY_v = 0
 	while goalX_v == None:
 		goalY_v += 1
-		#if goalY_v == 14:
 		if goalY_v == 5 or goalY_v > startY_v:
 			break
 		for x in range(1, maxX):
@@ -522,7 +494,6 @@ def findPaths(affordances, jumps,levelStr,is_vertical=False):
 		if startX_h == 16:
 			break
 		for y in range(maxY-1, 0, -1):
-			#print(y, startX)
 			if not isSolid(levelStr[y][startX_h]) and isSolid(levelStr[y + 1][startX_h]):
 				startY_h = y
 				break
@@ -541,13 +512,9 @@ def findPaths(affordances, jumps,levelStr,is_vertical=False):
 	#level[startY][startX] = '{'
 	#level[goalY][goalX] = '}'
 	
-	#print('S',startX_v, startY_v, ' G', goalX_v, goalY_v)
 	print('S',startX_h, startY_h, ' G', goalX_h, goalY_h)
-	#print('\n'.join(levelStr))
 	#paths = pathfinding.astar_shortest_path( (2,2,-1), lambda pos: pos[0] == maxX, getNeighbors, subOptimal, lambda pos: 0)#lambda pos: abs(maxX-pos[0]))
 	if None in [startX_h, startY_h, goalX_h, goalY_v, startX_v, startY_v, goalX_v, goalY_v]:
-		#print('start goal error')
-		#print(startX, startY, goalX, goalY)
 		return None, None, 0, 0
 
 	sx, sy = startX_h, startY_h
@@ -580,7 +547,6 @@ def findPathsFull(affordances, levelStr, game):
 	isHazard = makeIsHazard(hazards)
 	isClimbable = makeIsClimbable(climbables)
 
-	#maxX = len(levelStr[0])-1
 	maxX = len(levelStr[0]) - 1
 	maxY = len(levelStr) - 1
 	starts_h, goals_h = set(), set()
@@ -589,7 +555,6 @@ def findPathsFull(affordances, levelStr, game):
 	if game == 'ki' or game == 'mm' or game == 'ng':
 		startX = None
 		startY = maxY-1
-		#while startX == None and startY > 0:
 		while startX == None and startY > maxY-1:
 			startY -= 1
 			for x in range(0, maxX):
@@ -615,7 +580,6 @@ def findPathsFull(affordances, levelStr, game):
 
 		goalX = None
 		goalY = -1
-		#while goalX == None and goalY < maxY-1:
 		while goalX == None and goalY < 0:
 			goalY += 1
 			for x in range(0, maxX):
@@ -628,7 +592,6 @@ def findPathsFull(affordances, levelStr, game):
 
 		goalX = None
 		goalY = -1
-		#while goalX == None and goalY < maxY-1:
 		while goalX == None and goalY < 0:	
 			goalY += 1
 			for x in range(maxX-1, 0, -1):
@@ -641,7 +604,6 @@ def findPathsFull(affordances, levelStr, game):
 	if game == 'smb' or game == 'mm' or game == 'cv' or game == 'ng':
 		startX = -1
 		startY_bottom, startY_top = None, None
-		#while startY_bottom == None and startX < maxX:
 		while startY_bottom == None and startX < 0:
 			startX += 1
 			for y in range(maxY-1, 0, -1):
@@ -651,7 +613,6 @@ def findPathsFull(affordances, levelStr, game):
 					break
 		
 		startX = -1
-		#while startY_top == None and startX < maxX:
 		while startY_bottom == None and startX < 0:
 			startX += 1
 			for y in range(0, maxY-1):
@@ -662,7 +623,6 @@ def findPathsFull(affordances, levelStr, game):
 		
 		goalX = maxX+1
 		goalY_bottom, goalY_top = None, None
-		#while goalY_bottom == None and goalX > 0:
 		while goalY_bottom == None and goalX > maxX:
 			goalX -= 1
 			for y in range(maxY-1, 0, -1):
@@ -672,7 +632,6 @@ def findPathsFull(affordances, levelStr, game):
 					break
 
 		goalX = maxX+1
-		#while goalY_top == None and goalX > 0:
 		while goalY_bottom == None and goalX > maxX:
 			goalX -= 1
 			for y in range(0, maxY-1):
@@ -680,11 +639,6 @@ def findPathsFull(affordances, levelStr, game):
 					goalY_top = y
 					goals_h.add((goalX, goalY_top))
 					break
-		
-	#print('starts_h: ',starts_h)
-	#print('goals_h: ',goals_h)
-	#print('starts_v: ',starts_v)
-	#print('goals_v: ',goals_v)
 	for start in starts_h:
 		for goal in goals_h:
 			sg.add((start,goal))
@@ -727,21 +681,16 @@ def findPathsFull(affordances, levelStr, game):
 	#	return None, 0
 
 	if len(sg) == 0:
-	#if len(starts) == 0:
 		return None, 0
 	getNeighbors = makeGetNeighbors(jumps,levelStr,visited,isSolid,isPassable,isClimbable,isHazard,game)
 	#paths = pathfinding.astar_shortest_path( (start_X, start_Y,-1), lambda pos: pos[0] == maxX, getNeighbors, subOptimal, lambda pos: 0)
 	paths, best_dist, best_path = [], 0, None
 	for start, goal in sg:
-	#for start in starts:
-		#print(start)
-		#print('SG: ',start,goal)
 		startX, startY = start
 		goalX, goalY = goal
 		path, node = pathfinding.astar_shortest_path( (startX, startY,-1), lambda pos: pos[0] == goalX and pos[1] == goalY, getNeighbors, lambda pos: 0)
 		#path, node = pathfinding.astar_shortest_path( (startX, startY,-1), lambda pos: pos[1] == 0 if is_vertical else pos[0] == maxX, getNeighbors, lambda pos: 0)
-		#print('Path: ',path)
-		#print('Start: ', start, ' Goal: ', goal)
+		
 		if path:
 			#print('Path node: ', node)
 			first, last = path[0], path[-1]
@@ -749,28 +698,16 @@ def findPathsFull(affordances, levelStr, game):
 			if last[0] == goalX and last[1] == goalY:
 				dist = 16
 		else:
-			#print('SG:',start,goal)
-			#print('Dist: 0')
 			final_x, final_y = node[1][0], node[1][1]
 			dist_x = abs(final_x - startX)
 			dist_y = abs(final_y - startY)
 			dist = max(dist_x, dist_y)
-			#print('Start:', start)
-			#print('Goal: ', goal)
-			#print('No path dist: ', dist, '\tBest: ', best_dist)
-			#print('No path node: ', node)
 		#dist = node[1][0]+1
 		if dist > best_dist:
 			best_dist = dist
 			best_path = path
-	#print(node)
 	
 	best_dist /= 16
-	#print('Best dist in play: ', best_dist)
 	if not best_path:
-		#for i,(start,goal) in enumerate(sg):
-		#	print(i,'Start: ', start, '\tGoal: ', goal)
-		#print('\n')
-		#print('no best path Starts:',starts)
 		return None, best_dist
 	return [ (p[0],p[1]) for p in best_path], best_dist

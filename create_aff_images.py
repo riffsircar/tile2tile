@@ -17,7 +17,7 @@ for from_game in ['smb','ki','mm','met']:
         from_level = [''.join(l) for l in from_level]
         from_img = get_image_from_segment(from_level)
         from_translated_text = '\n'.join(from_translated)
-        font = ImageFont.truetype('courbd.ttf', font_size)
+        font = ImageFont.truetype('fonts/courbd.ttf', font_size)
         aff_img = Image.new('RGB',(16*font_size, 15*font_size), color='white')
         aff_draw = ImageDraw.Draw(aff_img)
         for row, seq in enumerate(from_translated):

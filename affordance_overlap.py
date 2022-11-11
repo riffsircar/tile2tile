@@ -64,7 +64,7 @@ if args.mt == 'fc':
 else:
     model = ConvAutoencoder(num_sketch_tiles, num_tiles, args.z).to(args.device)
 opt = optim.Adam(model.parameters(), lr=0.001)
-model.load_state_dict(torch.load('trained_models/' + args.model_name + '.pth',map_location=torch.device(args.device)))
+model.load_state_dict(torch.load('trained_ae/' + args.model_name + '.pth',map_location=torch.device(args.device)))
 model.eval()
 
 

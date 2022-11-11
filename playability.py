@@ -3,35 +3,32 @@ import torch
 import torch.utils.data
 from util import *
 from Autoencoder import *
-import collections, warnings
+import warnings
 import torch.optim as optim
 from agent import *
 import pickle
 
-parser = argparse.ArgumentParser(description='Autoencoder')
-
+parser = argparse.ArgumentParser(description='Playability evaluation')
 parser.add_argument('--seed', type=int, default=0, help='random seed (default: 0)')
-parser.add_argument('--cuda', type=int, default=1, help='use of cuda (default: 1)')
-parser.add_argument('--epochs', type=int, default=250, help='number of total epochs to run (default: 100)')
+parser.add_argument('--cuda', type=int, default=0, help='use of cuda (default: 0)')
+parser.add_argument('--epochs', type=int, default=250, help='number of total epochs to run (default: 250)')
 parser.add_argument('--batch_size', default=64, type=int, help='mini-batch size (default: 64)')
-parser.add_argument('--z', default=32, type=int, help='gaussian size (default: 64)')
+parser.add_argument('--z', default=32, type=int, help='gaussian size (default: 32)')
 parser.add_argument('--game', default='smb', type=str)
 parser.add_argument('--mt', default='conv', choices=['fc','conv'], type=str, help='autoencoder type')
 parser.add_argument('--mod', default='ae', choices=['ae','mrf'], type=str, help='model type')
-parser.add_argument('--ns', default=4, choices=[4,8], type=int, help='MRF net')
+parser.add_argument('--ns', default=4, choices=[4,8], type=int, help='MRF network size (default: 4)')
 args = parser.parse_args()
 
 warnings.filterwarnings("ignore")
 path = ''
 folder = path + 'data/' + game_folders[args.game]
 
-args.cuda = 0
-args.verbose = 1
 args.model_name = 'ae_full_' + args.mt + '_' + args.game + '_'
 args.model_name += 'ld_' + str(args.z) + '_'
 args.model_name += str(args.epochs)
-print(args.model_name)
-print('LD: ', args.z)
+print('Model Name: ', args.model_name)
+print('Latent Size: ', args.z)
 args.device = torch.device('cuda') if args.cuda else torch.device('cpu')
 if args.cuda == 1:
    os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpuID)
@@ -44,44 +41,41 @@ if args.cuda:
 	torch.cuda.manual_seed(SEED)
 to_levels_original, text = parse_folder(folder,args.game)
 text = text.replace('\n','')
-print(len(to_levels_original))
+# print(len(to_levels_original))
 chars = sorted(list(set(text.strip('\n'))))
 sketch_chars = ['X','E','|','*','-']
 int2char = dict(enumerate(chars))
 int2sc = dict(enumerate(sketch_chars))
 char2int = {ch: ii for ii, ch in int2char.items()}
 sc2int = {ch: ii for ii, ch in int2sc.items()}
-print(char2int)
-print(sc2int)
-print(int2sc)
+# print(char2int)
+# print(sc2int)
+# print(int2sc)
 num_tiles = len(char2int)
 num_sketch_tiles = len(sc2int)
-print('Tiles: ', num_tiles)
-print('Sketch Tiles: ', num_sketch_tiles)
+# print('Tiles: ', num_tiles)
+# print('Sketch Tiles: ', num_sketch_tiles)
 input_size = num_sketch_tiles*15*16
 output_size = num_tiles*15*16
 
-with open(path + 'aff_aff.json') as f:
+with open(path + 'affordances/aff_aff.json') as f:
 	aff_aff = json.load(f)
-with open(path + 'aff_smb.json') as f:
+with open(path + 'affordances/aff_smb.json') as f:
 	aff_smb = json.load(f)
-	#print('smb: ', aff_smb, '\n')
-with open(path + 'aff_ki.json') as f:
+with open(path + 'affordances/aff_ki.json') as f:
 	aff_ki = json.load(f)
-	#print('ki: ', aff_ki, '\n')
-with open(path + 'aff_mm.json') as f:
+with open(path + 'affordances/aff_mm.json') as f:
 	aff_mm = json.load(f)
-	#print('mm: ', aff_mm, '\n')
-with open(path + 'aff_met.json') as f:
+with open(path + 'affordances/aff_met.json') as f:
 	aff_met = json.load(f)
 
-with open(path + 'jumps_smb.json') as f:
+with open(path + 'jumps/jumps_smb.json') as f:
 	jumps_smb = json.load(f)['jumps']
-with open(path + 'jumps_ki.json') as f:
+with open(path + 'jumps/jumps_ki.json') as f:
 	jumps_ki = json.load(f)['jumps']
-with open(path + 'jumps_mm.json') as f:
+with open(path + 'jumps/jumps_mm.json') as f:
 	jumps_mm = json.load(f)['jumps']
-with open(path + 'jumps_met.json') as f:
+with open(path + 'jumps/jumps_met.json') as f:
 	jumps_met = json.load(f)['jumps']
 
 affs = {'aff':aff_aff, 'smb':aff_smb, 'ki': aff_ki, 'mm':aff_mm, 'met':aff_met}
@@ -90,28 +84,21 @@ jumps = {'smb':jumps_smb, 'ki': jumps_ki, 'mm':jumps_mm, 'met':jumps_met}
 def extract_chunks(level):
 	chunks = []
 	for h_offset in range(0,len(level)-15+1,15): #,dims[0]):
-		#out = []
-		#print("H: ", h_offset)
 		for w_offset in range(0,len(level[0])-(16-1),16): #,dims[1]):
 			write = True
-			#print("W: ", w_offset)
 			out = []
 			for line in level[h_offset:h_offset+15]:
-				#print(line)
 				out.append(line[w_offset:w_offset+16])
-			#print(out)
 			if any('@' in line for line in out):
 				continue
-			#print(type(out), len(out), len(out[0]))
 			chunks.append(out)
 			try:
 				out_string = '\n'.join(out)
 			except:
-				#print(level)
+				print(out_string)
 				print(out)
 				print(type(out), len(out), len(out[0]))
 				sys.exit()
-				#print(out_string,'\n')
 			# count = 0
 			# for line in out:
 			# 	count += line.count('#')
@@ -128,7 +115,7 @@ if args.mod == 'ae':
 	else:
 		model = ConvAutoencoder(num_sketch_tiles, num_tiles, args.z).to(args.device)
 	opt = optim.Adam(model.parameters(), lr=0.001)
-	model.load_state_dict(torch.load('trained_models/' + args.model_name + '.pth',map_location=torch.device(args.device)))
+	model.load_state_dict(torch.load('trained_ae/' + args.model_name + '.pth',map_location=torch.device(args.device)))
 	model.eval()
 	for from_game in ['smb','ki','mm','met']: 
 		if from_game == args.game:
@@ -139,7 +126,6 @@ if args.mod == 'ae':
 		h, v, e = 0, 0, 0
 		for from_level in from_levels_original:
 			from_translated = translate_level(from_level,from_game)
-			#to_level = apply_ae(model, from_translated, num_tiles, int2char, args.mt)
 			to_level = apply_ae(model, from_translated, num_tiles, args.game, args.mt)
 			to_aff = affs[args.game]
 			to_jumps = jumps[args.game]
@@ -155,12 +141,11 @@ if args.mod == 'ae':
 		print(args.game)
 		print(from_game, num_levels, (h*100)/num_levels, (v*100)/num_levels, (e*100)/num_levels)
 else:
-	mrf_ns = '8'
-	print('MRF', mrf_ns)
-	smb_mrf = pickle.load(open('mrf_' + mrf_ns + '_' + 'smb.pickle','rb'))
-	ki_mrf = pickle.load(open('mrf_' + mrf_ns + '_' + 'ki.pickle','rb'))
-	mm_mrf = pickle.load(open('mrf_' + mrf_ns + '_' + 'mm.pickle','rb'))
-	met_mrf = pickle.load(open('mrf_' + mrf_ns + '_' + 'met.pickle','rb'))
+	# mrf_ns = '8'
+	smb_mrf = pickle.load(open(f'trained_mrf/mrf_{args.ns}_smb.pickle','rb'))
+	ki_mrf = pickle.load(open(f'trained_mrf/mrf_{args.ns}_ki.pickle','rb'))
+	mm_mrf = pickle.load(open(f'trained_mrf/mrf_{args.ns}_mm.pickle','rb'))
+	met_mrf = pickle.load(open(f'trained_mrf/mrf_{args.ns}_met.pickle','rb'))
 	mrfs = {'smb':smb_mrf, 'ki':ki_mrf, 'mm':mm_mrf, 'met':met_mrf}
 
 
@@ -172,7 +157,7 @@ else:
 		for level_file in os.listdir('VGLC/' + from_game + '/'):
 			from_level = open('VGLC/' + from_game + '/' + level_file).read().splitlines()
 			from_translated = translate_level(from_level,from_game,'mrf')
-			out_level = apply_mrf(from_translated,mrfs[args.game],args.game,int(mrf_ns))
+			out_level = apply_mrf(from_translated,mrfs[args.game],args.game, int(args.ns))
 			#print('\n'.join(out_level))
 			chunks.extend(extract_chunks(out_level))
 			to_level = [''.join(l) for l in out_level]
@@ -183,7 +168,6 @@ else:
 			# v_path, v_goals = find_path(to_aff,to_jumps,to_level,'v')
 			# print(h_path)
 			# print(v_path)
-			#sys.exit()
 		print(len(chunks))
 		h, v, e = 0, 0, 0
 		for chunk in chunks:
@@ -201,23 +185,4 @@ else:
 		num_levels = len(chunks)
 		print(args.game)
 		print(from_game, num_levels, (h*100)/num_levels, (v*100)/num_levels, (e*100)/num_levels)
-sys.exit()
-
-for from_game in ['smb','ki','mm','met']:
-	if from_game == args.game:
-		continue
-	from_folder = path + 'data/' + game_folders[from_game]
-	from_levels_original, text = parse_folder(from_folder,from_game)
-	for from_level in from_levels_original:
-		print(from_level)
-		from_translated = translate_level(from_level,from_game)
-		to_level = apply_ae(model, from_translated, num_tiles, int2char)
-		print('\n'.join(to_level))
-		to_aff = affs[args.game]
-		to_jumps = jumps[args.game]
-		h_path, h_goals = find_path(to_aff,to_jumps,to_level,'h')
-		v_path, v_goals = find_path(to_aff,to_jumps,to_level,'v')
-		print(h_path)
-		print(v_path)
-		
 
